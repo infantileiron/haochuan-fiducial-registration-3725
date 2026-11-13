@@ -20,7 +20,7 @@ docker compose exec -T backend python -m scripts.seed_demo
 
 | 角色 / 账号 | 页面 | 权限与典型动作 |
 |---|---|---|
-| admin@haochuan.test / 配准复核工程师 | 六页与审计 | 读写、批准/退回、审核最终R/t与内点 |
+| admin@haochuan.test / 配准复核工程师 | 六页与审计 | 读写、批准/退回/撤销批准、审核最终R/t与内点 |
 | analyst@haochuan.test / 光学测量分析员 | 点对、轴系、研究、结果、复核 | 导入、声明、运行、提审、生成批准报告 |
 | viewer@haochuan.test / 测量档案阅览员 | 六页只读 | 查阅并下载已批准CSV |
 
@@ -35,7 +35,15 @@ docker compose exec -T backend python -m scripts.seed_demo
 5. 09:20 Redis排队，独立Python worker计算全量Kabsch、最小3点RANSAC与内点精炼。
 6. 09:25 在XY/XZ投影对照原始源点、目标与变换后源点；查看8个阈值外点。
 7. 09:30 分开核对全点RMSE、52内点RMSE、detR=+1与精炼稳定性，分析员提审。
-8. 09:40 工程师批准，阅览员下载两组R/t、原始点对、最终残差/分类与快照哈希CSV。
+8. 09:40 工程师批准，阅览员下载两组R/t、原始点对、最终残差/分类与快照哈希CSV。若事后发现批准错误，工程师可填写原因撤销批准：旧报告立即失效并停止下载，重新提审通过后另出新报告，旧报告不随再次批准恢复。
+
+## 复核决定链、撤销与报告失效
+
+复核意见不再被覆盖：每条复核的每次决定（批准/退回/撤销）都作为不可变记录追加到 `decisions`，保存决定编号、动作、意见或撤销原因、经办人邮箱与时间；复核本体仅维护当前状态与 `effective_decision_id`（当前有效批准指向的决定编号）。退回或撤销后分析员可对同一运行重新提审，形成新一轮完整决定链；同一运行同时只允许一条待审或有效批准的复核。
+
+撤销批准（`POST /reviews/{id}/revoke`，仅工程师，原因至少5字）在同一数据库事务内完成：复核置 `revoked`、清空有效批准指针、追加撤销决定，并把该复核下所有 `active` 报告置为 `invalid` 且登记失效原因。失效报告仍可在档案页查阅但禁止下载，下载接口以报告状态、有效批准和决定绑定三重校验拦截；重新提审通过后生成的报告绑定新的决定编号，旧报告永不复活。报告生成与审批/撤销经同一把进程锁与数据库事务串行化，并发时以“仍有效”的批准为准。页面每份报告都展示其绑定的决定编号、动作、经办人与时间，可追查报告对应哪次决定。
+
+旧数据升级在应用启动时由 `src/services/migration.py` 幂等执行（见 `backend/migrations/002_review_decisions_revoke.sql`）：为无决定历史的旧复核补录历史决定并回填有效批准指针，为旧报告补绑决定编号与状态；原有复核意见、经办人和报告全部保留、仍可查阅，历史批准报告默认保持可下载。
 
 ## 输入、轴系与快照
 
@@ -66,7 +74,7 @@ RANSAC阈值[1e-6,100]mm、迭代1—2000、seed在[0,2147483647]；默认0.5mm/
 | 数值 | NumPy2.2.1，Kabsch SVD + 自实现固定seed RANSAC |
 | 异步/数据库 | Redis7.4 / 独立worker / PostgreSQL16 |
 
-80个代码源文件，其中src内76个职责文件。backend/src含routes/controllers/services/models/schemas/middlewares/utils/constants/config；frontend/src含api/stores/types/components/common/hooks/pages/router/utils/constants。迁移DDL在backend/migrations，advisory lock保护首次建表。自然键insert-only seed，重复不新增、不覆盖用户修改；失败记日志不阻断API。
+82个代码源文件，其中src内77个职责文件。backend/src含routes/controllers/services/models/schemas/middlewares/utils/constants/config；frontend/src含api/stores/types/components/common/hooks/pages/router/utils/constants。迁移DDL在backend/migrations，advisory lock保护首次建表。自然键insert-only seed，重复不新增、不覆盖用户修改；失败记日志不阻断API。
 
 固定种子2405：60组3D点，模拟旋转Rz(22°)Ry(−11°)、t=(12,−7,4.5)mm、坐标高斯噪声sd=.03mm，前8个目标额外偏移形成离群；算法未接收离群真值标签。默认阈值下最终52内点/8阈值外。所有真实测试/截图/报告仅在批次test-artifacts/gb-2405。
 

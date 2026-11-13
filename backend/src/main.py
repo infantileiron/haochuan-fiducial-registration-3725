@@ -9,6 +9,10 @@ from src.routes import auth,dataset,study,run,review,report,audit,frame
 @asynccontextmanager
 async def lifespan(app):
     repo.init_db()
+    from src.services.migration import migrate
+    try:
+        migrate()
+    except Exception: logging.exception("legacy data migration failed; API remains available")
     if SEED_DEMO:
         try:
             from src.services.seed import seed

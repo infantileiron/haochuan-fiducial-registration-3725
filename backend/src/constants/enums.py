@@ -12,3 +12,11 @@ class ReviewStatus(str, Enum):
     PENDING = "pending"
     APPROVED = "approved"
     REJECTED = "rejected"
+    REVOKED = "revoked"
+class DecisionAction(str, Enum):
+    APPROVE = "approved"
+    REJECT = "rejected"
+    REVOKE = "revoked"
+class ReportStatus(str, Enum):
+    ACTIVE = "active"
+    INVALID = "invalid"

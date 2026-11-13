@@ -20,6 +20,7 @@ def seed():
  f={'id':'frame-camera-table','name':'相机A → 台架B / 毫米右手系','dataset_id':d['id'],'source_frame':'CAMERA-A','target_frame':'TABLE-B','unit':'mm','axes':'right-handed xyz','created_at':now()};repo.put('frames',f,insert_only=True)
  snapshot,checksum=lock_snapshot(d,f,.5,400,2405);study={'id':'study-registration','name':'十一月台架标志点稳健配准','dataset_id':d['id'],'frame_id':f['id'],'threshold_mm':.5,'iterations':400,'seed':2405,'snapshot':snapshot,'checksum':checksum,'created_at':now()};repo.put('studies',study,insert_only=True)
  repo.put('runs',{'id':'run-demo','study_id':study['id'],'status':'completed','result':analyze(snapshot,checksum),'error':'','created_at':now()},insert_only=True)
- repo.put('reviews',{'id':'review-demo','run_id':'run-demo','comment':'毫米与右手轴系锁定；全量/稳健残差、最终内点和detR核验通过。','status':'approved','reviewer':'admin@haochuan.test','created_at':now()},insert_only=True)
- repo.put('reports',{'id':'report-demo','run_id':'run-demo','review_id':'review-demo','title':'皓川光学台架刚体配准复核册','created_at':now()},insert_only=True)
+ review_created=now();review_decision={'id':'dec-demo','action':'approved','comment':'毫米与右手轴系锁定；全量/稳健残差、最终内点和detR核验通过。','actor':'admin@haochuan.test','created_at':review_created}
+ repo.put('reviews',{'id':'review-demo','run_id':'run-demo','comment':'毫米与右手轴系锁定；全量/稳健残差、最终内点和detR核验通过。','status':'approved','reviewer':'admin@haochuan.test','created_at':review_created,'decisions':[review_decision],'effective_decision_id':'dec-demo','revoked_reason':''},insert_only=True)
+ repo.put('reports',{'id':'report-demo','run_id':'run-demo','review_id':'review-demo','title':'皓川光学台架刚体配准复核册','created_at':now(),'decision_id':'dec-demo','status':'active','invalid_reason':''},insert_only=True)
  return {t:len(repo.all_rows(t)) for t in ('users','datasets','frames','studies','runs','reviews','reports')}

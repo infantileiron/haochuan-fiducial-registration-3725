@@ -33,6 +33,8 @@ class ReviewInput(InputModel):
 class DecisionInput(InputModel):
  status:Literal['approved','rejected']
  comment:str=Field(min_length=5,max_length=2000)
+class RevokeInput(InputModel):
+ reason:str=Field(min_length=5,max_length=2000)
 class ReportInput(InputModel):
  run_id:str
  review_id:str

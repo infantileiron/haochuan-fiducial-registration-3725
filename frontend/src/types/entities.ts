@@ -6,4 +6,7 @@ export type Fit={R:number[][];t:number[];predicted:number[][];residuals:number[]
 export type Robust=Fit&{rmse_all:number;rmse_inliers:number;max_error_all:number;inlier_count:number;outlier_count:number;threshold_mm:number;iterations:number;valid_samples:number;seed:number;inlier_mask:boolean[];inlier_ids:string[];best_sample_ids:string[];fitted_ids:string[];refinement_steps:number;refinement_stable:boolean};
 export type Row=Point&{full_predicted:number[];robust_predicted:number[];full_residual:number;robust_residual:number;inlier:boolean};
 export type Result={rows:Row[];point_count:number;full:Fit;robust:Robust;frame:Frame;threshold_mm:number;iterations:number;seed:number;source:string;convention:string;checksum:string;limitations:string[]};
-export type Run={id:string;study_id:string;status:string;result:Result;error:string};export type Review={id:string;run_id:string;comment:string;status:string;reviewer:string};export type Report={id:string;run_id:string;review_id:string;title:string};
+export type Run={id:string;study_id:string;status:string;result:Result;error:string};
+export type ReviewDecision={id:string;action:string;comment:string;actor:string;created_at:string};
+export type Review={id:string;run_id:string;comment:string;status:string;reviewer:string;decisions?:ReviewDecision[];effective_decision_id?:string;revoked_reason?:string};
+export type Report={id:string;run_id:string;review_id:string;title:string;decision_id?:string;status?:string;invalid_reason?:string;created_at?:string};
